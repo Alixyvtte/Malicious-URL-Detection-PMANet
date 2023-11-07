@@ -1,20 +1,27 @@
 import torch.nn as nn
+
 class CBAMLayer(nn.Module):
+    """
+        Initializes a CBAM (Attention Module) Layer.
+
+        :param channel: The number of input channels.
+        :param reduction: The reduction ratio for channel attention (default is 3).
+        :param spatial_kernel: The size of the spatial kernel (default is 7).
+
+        It's worth noting that we only utilize the channel attention in CBAM.
+    """
     def __init__(self, channel, reduction=3, spatial_kernel=7):
         super(CBAMLayer, self).__init__()
 
-        # channel attention 压缩H,W为1
+        # Channel attention: Compress H and W to 1
         self.max_pool = nn.AdaptiveMaxPool2d(1)
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
 
-        # shared MLP
+        # Shared MLP
         self.mlp = nn.Sequential(
-            # Conv2d比Linear方便操作
-            # nn.Linear(channel, channel // reduction, bias=False)
+            # Use Conv2d for more convenient operations compared to Linear
             nn.Conv2d(channel, channel // reduction, 1, bias=False),
-            # inplace=True直接替换，节省内存
-            nn.ReLU(inplace=True),
-            # nn.Linear(channel // reduction, channel,bias=False)
+            nn.ReLU(inplace=True),  # Inplace operation to save memory
             nn.Conv2d(channel // reduction, channel, 1, bias=False)
         )
 
