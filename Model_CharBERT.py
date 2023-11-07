@@ -4,6 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from bert_utils import BertLayer, ACT2FN, BertPooler
 
+""" CharBERT model from the paper 'CharBERT: Character-aware Pre-trained Language Model' """
+
 BertLayerNorm = torch.nn.LayerNorm
 
 class CharBertModel(nn.Module):
@@ -53,8 +55,6 @@ class CharBertModel(nn.Module):
             https://arxiv.org/abs/1706.03762
 
         """
-        # print(f'shape info in CharBertModel: input_ids {input_ids.size()}')
-        # print(f'shape info in CharBertModel: char_input_ids {char_input_ids.size()}')
 
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
