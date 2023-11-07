@@ -97,13 +97,13 @@ def main():
     input_ids = []  # input char ids
     input_types = []  # segment ids
     input_masks = []  # attention mask
-    label = []  # 标签
+    label = []  # Label
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     dataPreprocess("benign_urls.txt", input_ids, input_types, input_masks, label, 0)
     dataPreprocess("malware_urls.txt", input_ids, input_types, input_masks, label, 1)
 
-    input_ids_train, input_types_train, input_masks_train, y_train, input_ids_test, input_types_test, input_masks_test, y_test = spiltDatast(
+    input_ids_train, input_types_train, input_masks_train, y_train, input_ids_val, input_types_val, input_masks_val, y_val = spiltDatast(
         input_ids, input_types, input_masks, label)
 
     # Load data into efficient DataLoaders
@@ -115,12 +115,12 @@ def main():
     train_sampler = RandomSampler(train_data)
     train_loader = DataLoader(train_data, sampler=train_sampler, batch_size=BATCH_SIZE)
 
-    test_data = TensorDataset(torch.tensor(input_ids_test).to(DEVICE),
-                              torch.tensor(input_types_test).to(DEVICE),
-                              torch.tensor(input_masks_test).to(DEVICE),
-                              torch.tensor(y_test).to(DEVICE))
-    test_sampler = SequentialSampler(test_data)
-    test_loader = DataLoader(test_data, sampler=test_sampler, batch_size=BATCH_SIZE)
+    val_data = TensorDataset(torch.tensor(input_ids_val).to(DEVICE),
+                              torch.tensor(input_types_val).to(DEVICE),
+                              torch.tensor(input_masks_val).to(DEVICE),
+                              torch.tensor(y_val).to(DEVICE))
+    val_sampler = SequentialSampler(val_data)
+    val_loader = DataLoader(val_data, sampler=val_sampler, batch_size=BATCH_SIZE)
 
     model = Model().to(DEVICE)
 
@@ -131,11 +131,10 @@ def main():
     PATH = '/model.pth'  # Define the model saving path
     for epoch in range(1, NUM_EPOCHS + 1):  # 3 epochs
         train(model, DEVICE, train_loader, optimizer, epoch)
-        acc, precision, recall, f1 = validation(model, DEVICE, test_loader)
+        acc, precision, recall, f1 = validation(model, DEVICE, val_loader)
         if best_acc < acc:
             best_acc = acc
             torch.save(model.state_dict(), PATH)  # Save the best model
         print("acc is: {:.4f}, best acc is {:.4f}n".format(acc, best_acc))
-
 if __name__ == '__main__':
     main()
