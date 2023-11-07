@@ -6,7 +6,12 @@ from numpy.compat import unicode
 from pytorch_pretrained_bert.modeling import BertLayerNorm
 from torch import nn
 
+"""PyTorch BERT model. """
+
 class BertLayer(nn.Module):
+    """
+    BERT Layer module.
+    """
     def __init__(self, config):
         super(BertLayer, self).__init__()
         self.attention = BertAttention(config)
@@ -18,6 +23,20 @@ class BertLayer(nn.Module):
 
     def forward(self, hidden_states, attention_mask=None, head_mask=None, encoder_hidden_states=None,
                 encoder_attention_mask=None):
+        """
+                Forward pass of the BERT layer.
+
+                Args:
+                    hidden_states: The input hidden states.
+                    attention_mask: The attention mask for self-attention.
+                    head_mask: The mask for individual attention heads.
+                    encoder_hidden_states: The hidden states of the encoder (for cross-attention, if decoder).
+                    encoder_attention_mask: The attention mask for encoder hidden states.
+
+                Returns:
+                    outputs: The output tensor of the BERT layer.
+
+        """
         self_attention_outputs = self.attention(hidden_states, attention_mask, head_mask)
         attention_output = self_attention_outputs[0]
         outputs = self_attention_outputs[1:]  # add self attentions if we output attention weights
@@ -32,6 +51,7 @@ class BertLayer(nn.Module):
         layer_output = self.output(intermediate_output, attention_output)
         outputs = (layer_output,) + outputs
         return outputs
+
 
 class BertAttention(nn.Module):
     def __init__(self, config):
@@ -73,9 +93,6 @@ class BertAttention(nn.Module):
 
 def gelu(x):
     """ Original Implementation of the gelu activation function in Google Bert repo when initially created.
-        For information: OpenAI GPT's gelu is slightly different (and gives slightly different results):
-        0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
-        Also see https://arxiv.org/abs/1606.08415
     """
     return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
 
@@ -96,6 +113,7 @@ def mish(x):
 
 
 ACT2FN = {"gelu": gelu, "relu": F.relu, "swish": swish, "gelu_new": gelu_new, "mish": mish}
+
 class BertIntermediate(nn.Module):
     def __init__(self, config):
         super(BertIntermediate, self).__init__()
@@ -179,6 +197,7 @@ class BertSelfAttention(nn.Module):
         outputs = (context_layer, attention_probs) if self.output_attentions else (context_layer,)
         return outputs
 
+
 class BertSelfOutput(nn.Module):
     def __init__(self, config):
         super(BertSelfOutput, self).__init__()
@@ -191,6 +210,8 @@ class BertSelfOutput(nn.Module):
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
+
+
 class BertOutput(nn.Module):
     def __init__(self, config):
         super(BertOutput, self).__init__()
@@ -203,6 +224,8 @@ class BertOutput(nn.Module):
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
+
+
 class BertPooler(nn.Module):
     def __init__(self, config):
         super(BertPooler, self).__init__()
@@ -216,6 +239,7 @@ class BertPooler(nn.Module):
         pooled_output = self.dense(first_token_tensor)
         pooled_output = self.activation(pooled_output)
         return pooled_output
+        
 def prune_linear_layer(layer, index, dim=0):
     """ Prune a linear layer (a model parameters) to keep only entries in index.
         Return the pruned layer as a new layer with requires_grad=True.
