@@ -13,38 +13,38 @@ def test_mutilple(model, device, test_loader, num_classes=4):
     test_loss = 0.0
     y_true = []
     y_pred = []
-    y_probs = []  # 保存所有类别的预测概率
+    y_probs = []  # Save predicted probabilities for all classes
 
     for batch_idx, (x1, x2, x3, y) in enumerate(test_loader):
         x1, x2, x3, y = x1.to(device), x2.to(device), x3.to(device), y.to(device)
         with torch.no_grad():
             outputs, pooled, y_ = model([x1, x2, x3])
 
-        # 使用多分类交叉熵损失函数
-        loss = F.cross_entropy(y_, y.squeeze())  # y是类别索引
+        # Use multi-class cross-entropy loss
+        loss = F.cross_entropy(y_, y.squeeze())  # y is the class index
         test_loss += loss.item()
 
-        pred = y_.max(-1, keepdim=True)[1]  # 获取预测的类别索引
+        pred = y_.max(-1, keepdim=True)[1]  # Get the predicted class index
 
         y_true.extend(y.cpu().numpy())
         y_pred.extend(pred.cpu().numpy())
 
-        # 保存所有类别的预测概率
+        # Save predicted probabilities for all classes
         y_probs.extend(torch.softmax(y_, dim=1).cpu().numpy())
 
     test_loss /= len(test_loader)
 
     accuracy = accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, average='macro')  # 修改为多分类的宏平均精度
-    recall = recall_score(y_true, y_pred, average='macro')  # 修改为多分类的宏平均召回率
-    f1 = f1_score(y_true, y_pred, average='macro')  # 修改为多分类的宏平均F1分数
+    precision = precision_score(y_true, y_pred, average='macro')  # Change to macro-averaged precision for multi-class
+    recall = recall_score(y_true, y_pred, average='macro')  # Change to macro-averaged recall for multi-class
+    f1 = f1_score(y_true, y_pred, average='macro')  # Change to macro-averaged F1 score for multi-class
 
     cm = confusion_matrix(y_true, y_pred)
 
-    # 保存混淆矩阵图
+    # Save the confusion matrix plot
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=range(num_classes),
-                yticklabels=range(num_classes))  # 根据类别数调整标签
+                yticklabels=range(num_classes))  # Adjust labels based on the number of classes
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Confusion Matrix')
@@ -72,8 +72,8 @@ def test_mutilple(model, device, test_loader, num_classes=4):
         plt.legend(loc='lower right')
         plt.savefig(f'roc_curve_class_{i}.png')
 
-    # 保存预测结果、原结果、预测概率到txt文件
-    results_array = np.column_stack((y_true, y_pred) + tuple(y_probs.T))  # 保存所有类别的预测概率
+    # Save predicted results, original results, and predicted probabilities to a txt file
+    results_array = np.column_stack((y_true, y_pred) + tuple(y_probs.T))  # Save predicted probabilities for all classes
     header_text = "True label, Predicted label" + ''.join([f", Probability Class {i}" for i in range(num_classes)])
     np.savetxt('results.txt', results_array, fmt='%1.6f', delimiter='\t', header=header_text)
 
@@ -86,10 +86,10 @@ def main():
     input_ids = []  # input char ids
     input_types = []  # segment ids
     input_masks = []  # attention mask
-    label = []  # 标签
+    label = []  # Labels
 
-    dataPreprocessFromCSV("/hy-tmp/dataset/multi_test.csv", input_ids, input_types, input_masks, label)
-    # 加载到高效的DataLoader
+    dataPreprocessFromCSV("/dataset/multi_test.csv", input_ids, input_types, input_masks, label)
+    # Load data into efficient DataLoaders
     BATCH_SIZE = 64
     test_data = TensorDataset(torch.tensor(input_ids).to(DEVICE),
                               torch.tensor(input_types).to(DEVICE),
@@ -97,11 +97,11 @@ def main():
                               torch.tensor(label).to(DEVICE))
     test_sampler = SequentialSampler(test_data)
     test_loader = DataLoader(test_data, sampler=test_sampler, batch_size=BATCH_SIZE)
-    # 加载训练好的模型
-    model = Model().to(DEVICE)  # 替换为你的模型定义
-    model.load_state_dict(torch.load("/hy-tmp/multiple.pth"))  # 加载模型参数
+    # Load the pre-trained model
+    model = Model().to(DEVICE)  # Replace with your model definition
+    model.load_state_dict(torch.load("/multiple.pth"))  # Load model parameters
 
-    # 测试模型
+    # Test the model
     accuracy, precision, recall, f1 = test_mutilple(model, DEVICE, test_loader)
 
 if __name__ == '__main__':
