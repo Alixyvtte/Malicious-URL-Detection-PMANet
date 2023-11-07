@@ -6,31 +6,50 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import time
 from data_processing import dataPreprocess, spiltDatast
-from Model_PMA import Model
+from Model_PMA import Model, CharBertModel
 
-# 定义训练函数和测试函数
-def train(model, device, train_loader, optimizer, epoch):  # 训练模型
+
+def train(model, device, train_loader, optimizer, epoch): 
+    """
+     Train the model.
+
+    :param model: The model to be trained.
+    :param device: The device to run training on (e.g., CPU or GPU).
+    :param train_loader: The data loader for training data.
+    :param optimizer: The optimization algorithm.
+    :param epoch: The current epoch number.
+    :return: None
+    """
     model.train()
     best_acc = 0.0
     for batch_idx, (x1, x2, x3, y) in enumerate(train_loader):
         start_time = time.time()
         x1, x2, x3, y = x1.to(device), x2.to(device), x3.to(device), y.to(device)
 
-        outputs, pooled, y_pred = model([x1, x2, x3])  # 得到预测结果
-        model.zero_grad()  # 梯度清零
+        outputs, pooled, y_pred = model([x1, x2, x3])  # Get the prediction results
+        model.zero_grad()  # Reset gradients
 
-        loss = F.cross_entropy(y_pred, y.squeeze())  # 得到loss
+        loss = F.cross_entropy(y_pred, y.squeeze())  # Calculate the loss
         loss.backward()
 
         optimizer.step()
-        if (batch_idx + 1) % 100 == 0:  # 打印loss
+        if (batch_idx + 1) % 100 == 0:  # Print the loss
             print('Train Epoch: {} [{}/{} ({:.2f}%)]/t Loss: {:.6f}'.format(epoch, (batch_idx + 1) * len(x1),
                                                                             len(train_loader.dataset),
                                                                             100. * batch_idx / len(train_loader),
-                                                                            loss.item()))  # 记得为loss.item()
+                                                                            loss.item()))  # Remember to use loss.item()
+
 
 
 def validation(model, device, test_loader):
+    """
+    Perform model validation on the test data.
+
+    :param model: The model to be validated.
+    :param device: The device to run validation on (e.g., CPU or GPU).
+    :param test_loader: The data loader for test data.
+    :return: A tuple containing accuracy, precision, recall, and F1 score.
+    """
     model.eval()
     test_loss = 0.0
     y_true = []
@@ -43,7 +62,7 @@ def validation(model, device, test_loader):
 
         test_loss += F.cross_entropy(y_, y.squeeze()).item()
 
-        pred = y_.max(-1, keepdim=True)[1]  # .max(): 2输出，分别为最大值和最大值的index
+        pred = y_.max(-1, keepdim=True)[1]  # .max(): 2 outputs, representing the maximum value and its index
 
         y_true.extend(y.cpu().numpy())
         y_pred.extend(pred.cpu().numpy())
@@ -57,7 +76,7 @@ def validation(model, device, test_loader):
 
     cm = confusion_matrix(y_true, y_pred)
 
-    # 绘制混淆矩阵
+    # Plot the confusion matrix
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=['benign', 'malware'],
                 yticklabels=['benign', 'malware'])
@@ -65,13 +84,14 @@ def validation(model, device, test_loader):
     plt.ylabel('True')
     plt.title('Confusion Matrix')
 
-    # 保存混淆矩阵图
+    # Save the confusion matrix plot
     plt.savefig('confusion_matrix.png')
 
     print('Test set: Average loss: {:.4f}, Accuracy: {:.2f}%, Precision: {:.2f}%, Recall: {:.2f}%, F1: {:.2f}%'.format(
         test_loss, accuracy * 100, precision * 100, recall * 100, f1 * 100))
 
     return accuracy, precision, recall, f1
+
 
 def main():
     input_ids = []  # input char ids
@@ -80,13 +100,13 @@ def main():
     label = []  # 标签
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    dataPreprocess("/hy-tmp/urls/dataset/f_benign_urls.txt", input_ids, input_types, input_masks, label, 0)
-    dataPreprocess("/hy-tmp/urls/dataset/f_malware_urls.txt", input_ids, input_types, input_masks, label, 1)
+    dataPreprocess("benign_urls.txt", input_ids, input_types, input_masks, label, 0)
+    dataPreprocess("malware_urls.txt", input_ids, input_types, input_masks, label, 1)
 
     input_ids_train, input_types_train, input_masks_train, y_train, input_ids_test, input_types_test, input_masks_test, y_test = spiltDatast(
         input_ids, input_types, input_masks, label)
 
-    # 加载到高效的DataLoader
+    # Load data into efficient DataLoaders
     BATCH_SIZE = 64
     train_data = TensorDataset(torch.tensor(input_ids_train).to(DEVICE),
                                torch.tensor(input_types_train).to(DEVICE),
@@ -108,13 +128,13 @@ def main():
 
     best_acc = 0.0
     NUM_EPOCHS = 3
-    PATH = '/hy-tmp/roberta_modelxs.pth'  # 定义模型保存路径
-    for epoch in range(1, NUM_EPOCHS + 1):  # 3个epoch
+    PATH = '/model.pth'  # Define the model saving path
+    for epoch in range(1, NUM_EPOCHS + 1):  # 3 epochs
         train(model, DEVICE, train_loader, optimizer, epoch)
         acc, precision, recall, f1 = validation(model, DEVICE, test_loader)
         if best_acc < acc:
             best_acc = acc
-            torch.save(model.state_dict(), PATH)  # 保存最优模型
+            torch.save(model.state_dict(), PATH)  # Save the best model
         print("acc is: {:.4f}, best acc is {:.4f}n".format(acc, best_acc))
 
 if __name__ == '__main__':
