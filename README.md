@@ -7,7 +7,7 @@ The proposed framework, which is based on a character-aware pretrained language 
 
 ## Model Designs
 
-![image-20231108004419561](C:\Users\Alixy\AppData\Roaming\Typora\typora-user-images\image-20231108004419561.png)
+![Graphforgithub.png](https://s2.loli.net/2023/11/08/fF3KSqErtCzQVk5.png)
 
 ## Directory Guide
 
