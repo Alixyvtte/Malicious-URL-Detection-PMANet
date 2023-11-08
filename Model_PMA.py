@@ -47,17 +47,17 @@ class CharBertModel(nn.Module):
             window_size = pos_pooled.size(1) // level
 
             # Use average pooling for each level
+            # pooled_feature_tensor = F.avg_pool2d(pos_pooled.permute(0, 2, 3, 1), (1, window_size)).permute(0, 2, 3, 1)
             pooled_feature_tensor = F.avg_pool2d(pos_pooled.permute(0, 3, 2, 1), (1, window_size)).permute(0, 3, 2, 1)
-            # torch.Size([16, 768, 200,12])
+            # torch.Size([16, 200, 768, 12])
 
             # Add the pooling results for each level to the list
             pooled_features.append(pooled_feature_tensor)
 
         # Concatenate the pyramid pooling results along the feature dimension
         concatenated_features = torch.cat(pooled_features, dim=1)
-        # torch.Size([16, 10, 200, 768])
 
-        # compress the features to torch.Size([16, 768])
+        # compress the features
         compressed_feature_tensor = torch.mean(concatenated_features, dim=2)
         compressed_feature_tensor = torch.mean(compressed_feature_tensor, dim=1)
 
@@ -106,17 +106,17 @@ class Model(nn.Module):
             window_size = pos_pooled.size(1) // level
 
             # Use average pooling for each level
+            # pooled_feature_tensor = F.avg_pool2d(pos_pooled.permute(0, 2, 3, 1), (1, window_size)).permute(0, 2, 3, 1)
             pooled_feature_tensor = F.avg_pool2d(pos_pooled.permute(0, 3, 2, 1), (1, window_size)).permute(0, 3, 2, 1)
-            # torch.Size([16, 768, 200, 12])
+            # torch.Size([16, 200, 768, 12])
 
             # Add the pooling results for each level to the list
             pooled_features.append(pooled_feature_tensor)
 
         # Concatenate the pyramid pooling results from different levels along the feature dimension
         concatenated_features = torch.cat(pooled_features, dim=1)
-        # torch.Size([16, 10, 200, 768])
 
-        # compress the features to torch.Size([16, 768])
+        # compress the features
         compressed_feature_tensor = torch.mean(concatenated_features, dim=2)
         compressed_feature_tensor = torch.mean(compressed_feature_tensor, dim=1)
 
