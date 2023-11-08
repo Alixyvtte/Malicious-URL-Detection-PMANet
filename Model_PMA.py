@@ -3,7 +3,7 @@ import torch.nn as nn
 from pytorch_pretrained_bert import BertModel, BertTokenizer, BertConfig, BertAdam
 from attention import CBAMLayer
 import torch.nn.functional as F
-from Model_CharBERT import CharBertModel
+from Model_CharBERT import CharBERTModel
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -13,7 +13,7 @@ class CharBertModel(nn.Module):
     """
     def __init__(self):
         super(CharBertModel, self).__init__()
-        self.bert = CharBertModel(BertModel.from_pretrained('charbert-bert-wiki'))
+        self.bert = CharBERTModel(BertModel.from_pretrained('charbert-bert-wiki'))
         for param in self.bert.parameters():
             param.requires_grad = True
         self.dropout = nn.Dropout(p=0.1)  # Add a dropout layer

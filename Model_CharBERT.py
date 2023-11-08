@@ -8,9 +8,9 @@ from bert_utils import BertLayer, ACT2FN, BertPooler
 
 BertLayerNorm = torch.nn.LayerNorm
 
-class CharBertModel(nn.Module):
+class CharBERTModel(nn.Module):
     def __init__(self, config, is_roberta=False):
-        super(CharBertModel, self).__init__()
+        super(CharBERTModel, self).__init__()
         self.config = config
 
         self.embeddings = BertEmbeddings(config)
