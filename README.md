@@ -19,9 +19,9 @@ The proposed framework, which is based on a character-aware pretrained language 
 | data_processing.py       | Contains functions for preprocessing the dataset, including converting URL strings into BERT's input format and splitting it into training and validation sets. |
 | Model_PMA.py             | Where the proposed Malicious URL Detection PMANet architecture is stored. |
 | Model_CharBERT.py        | This file contains the original CharBERT model part.         |
-| Train.py                 | Trains the model according to given arguments, You need to modify the "*pre-trained model path*" and "*dataset path*". |
-| Test_binary.py           | Tests the pre-trained model in the binary classification experiments according to given arguments. |
-| Test_Multiple.py         | Tests the pre-trained model in the multiple classification experiment according to given arguments. |
+| Train.py                 | Trains the model according to given parameters, You need to modify the "*pre-trained model path*" and "*dataset path*". |
+| Test_binary.py           | Tests the pre-trained model in the binary classification experiments according to given parameters. |
+| Test_Multiple.py         | Tests the pre-trained model in the multiple classification experiment according to given parameters. |
 | bert_utils.py            | Some basic source codes of original bert which are used in the CharBERT structure. |
 | adverserial_generator.py | Where the functions to  generate adversarial examples by using specified samples are stored. |
 
