@@ -13,7 +13,7 @@ class CharBertModel(nn.Module):
     """
     def __init__(self):
         super(CharBertModel, self).__init__()
-        self.bert = CharBERTModel(BertModel.from_pretrained('charbert-bert-wiki'))
+        self.bert = CharBERTModel.from_pretrained('charbert-bert-wiki')
         for param in self.bert.parameters():
             param.requires_grad = True
         self.dropout = nn.Dropout(p=0.1)  # Add a dropout layer
