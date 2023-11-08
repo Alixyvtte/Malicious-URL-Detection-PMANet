@@ -36,7 +36,7 @@ Pytorch 2.0.0
 
 In all datasets for training or testing, each line includes the label and the URL text string following the template:
 
-`<URL label><label>`
+`<URL String><label>`
 
 **Example:**
 
@@ -47,7 +47,7 @@ http://www.exampleforbenign.com/urlpath/ 0
 http://www.exampleformalicious.com/urlpath/ 1
 ```
 
-You can adjust the hyper parameters for your specific computing device.  Also can further tuning the  `batch_size`, `learning_rate` and `train_epoch.`To train the model, use the '`Train.py`' file, and you can find descriptions of the training parameters that influence the training phase below.
+You can adjust the hyper parameters for your specific computing device.  Also can further tuning the  `batch_size`, `learning_rate` and `train_epoch.` To train the model, use the '`Train.py`' file, and you can find descriptions of the training parameters that influence the training phase below.
 
 | **Parameter** | Description                                                  | **Default**      |
 | :------------ | :----------------------------------------------------------- | :--------------- |
