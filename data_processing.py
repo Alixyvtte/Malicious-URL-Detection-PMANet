@@ -1,7 +1,10 @@
+import collections
+
 from pytorch_pretrained_bert import BertTokenizer
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
+
 
 def dataPreprocess(filename, input_ids, input_types, input_masks, label, urltype):
     """
@@ -97,6 +100,7 @@ def dataPreprocessFromCSV(filename, input_ids, input_types, input_masks, label):
         elif y == 'benign':
             label.append([0])
 
+
 def spiltDatast(input_ids, input_types, input_masks, label):
     """
     Split the dataset into training and testing sets.
@@ -134,3 +138,53 @@ def spiltDatast(input_ids, input_types, input_masks, label):
 
     return input_ids_train, input_types_train, input_masks_train, y_train, input_ids_test, input_types_test, input_masks_test, y_test
 
+
+def load_char_to_ids_dict(char_vocab_file):
+    """Loads a vocabulary file into a dictionary."""
+    vocab = collections.OrderedDict()
+    with open(char_vocab_file, "r", encoding="utf-8") as reader:
+        chars = reader.readlines()
+    for index, char in enumerate(chars):
+        char = char.rstrip('\n')
+        vocab[char] = index
+    return vocab
+
+
+def CharbertInput(context, char_ids, start_ids, end_ids):
+    """Create the additional input for CharBERT."""
+    bert_path = "charbert-bert-wiki/"
+    tokenizer = BertTokenizer(vocab_file=bert_path + "vocab.txt")
+    char_vocab_file = "./data/dict/bert_char_vocab.txt"
+    char2ids_dict = load_char_to_ids_dict(char_vocab_file=char_vocab_file)
+    max_length = 200
+    char_maxlen = max_length * 6
+    token = tokenizer.convert_ids_to_tokens(context)
+
+    token = token.strip("##")
+    if len(char_ids) < char_maxlen:
+        token = token.strip("##")
+    for char_idx, c in enumerate(token):
+        if len(char_ids) >= char_maxlen:
+            break
+
+        if char_idx == 0:
+            start_ids.append(len(char_ids))
+        if char_idx == len(token) - 1:
+            end_ids.append(len(char_ids))
+
+        if c in char2ids_dict:
+            cid = char2ids_dict[c]
+        else:
+            cid = char2ids_dict["<unk>"]
+        char_ids.append(cid)
+    if len(char_ids) > char_maxlen:
+        char_ids = char_ids[:char_maxlen]
+    else:
+        pad_len = char_maxlen - len(char_ids)
+        char_ids = char_ids + [0] * pad_len
+    while len(start_ids) < max_length:
+        start_ids.append(char_maxlen - 1)
+    while len(end_ids) < max_length:
+        end_ids.append(char_maxlen - 1)
+
+    return char_ids, start_ids, end_ids
