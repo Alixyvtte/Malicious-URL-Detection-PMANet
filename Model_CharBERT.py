@@ -159,7 +159,7 @@ class CharBERTModel(nn.Module):
 
         outputs = (sequence_output, pooled_output, char_sequence_output, char_pooled_output) + char_encoder_outputs[
                                                                                                1:]  # add hidden_states and attentions if they are here
-        return outputs  # sequence_output, pooled_output, (hidden_states), (attentions)
+        return outputs  # sequence_output, pooled_output, (all_hidden_states_for_word_and_char), (attentions)
 
 class BertEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings.
@@ -240,14 +240,19 @@ class CharBertEmbeddings(nn.Module):
         return char_embeddings_repr
 
 class CharBertEncoder(nn.Module):
+     """
+       We make changes here, for outputting Both the all hidden states_word and  all_hidden_states_char
+     """
     def __init__(self, config, is_roberta=False):
         super(CharBertEncoder, self).__init__()
         self.output_attentions = config.output_attentions
         self.output_hidden_states = config.output_hidden_states
         self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_hidden_layers)])
         self.word_linear1 = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
+        # self.word_linear2 = nn.Linear(config.hidden_size, config.hidden_size, bias=True)
         self.char_linear1 = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
-
+        # self.char_linear2 = nn.Linear(config.hidden_size, config.hidden_size, bias=True)
+        # self.share_bias = nn.Parameter(torch.zeros(config.hidden_size))
         if not is_roberta:
             fusion_layer = torch.nn.Conv1d(in_channels=config.hidden_size * 2, out_channels=config.hidden_size,
                                            kernel_size=3, padding=3 // 2)
@@ -263,7 +268,8 @@ class CharBertEncoder(nn.Module):
 
     def forward(self, char_hidden_states, hidden_states, attention_mask=None, head_mask=None,
                 encoder_hidden_states=None, encoder_attention_mask=None):
-        all_hidden_states = ()
+        all_hidden_states_char = ()
+        all_hidden_states_word = ()
         all_attentions = ()
         for i, layer_module in enumerate(self.layer):
             fusion_layer = None
@@ -272,7 +278,8 @@ class CharBertEncoder(nn.Module):
             else:
                 fusion_layer = self.fusion_layer
             if self.output_hidden_states:
-                all_hidden_states = all_hidden_states + (hidden_states,)
+                all_hidden_states_word = all_hidden_states_word + (hidden_states,)
+                all_hidden_states_char = all_hidden_states_char + (char_hidden_states,)
 
             layer_outputs = layer_module(hidden_states, attention_mask, head_mask[i], encoder_hidden_states,
                                          encoder_attention_mask)
@@ -283,12 +290,11 @@ class CharBertEncoder(nn.Module):
             char_outputs = char_layer_outputs[0]
             word_transform = self.word_linear1(word_outputs)
             char_transform = self.char_linear1(char_outputs)
-
+            # share_hidden  = self.act_layer(word_transform + char_transform + self.share_bias)
             share_cat = torch.cat([word_transform, char_transform], dim=-1)
             share_permute = share_cat.permute(0, 2, 1)
             share_fusion = fusion_layer(share_permute)
             share_hidden = share_fusion.permute(0, 2, 1)
-
 
             hidden_states = self.word_norm(share_hidden + word_outputs)
             char_hidden_states = self.char_norm(share_hidden + char_outputs)
@@ -298,11 +304,12 @@ class CharBertEncoder(nn.Module):
 
         # Add last layer
         if self.output_hidden_states:
-            all_hidden_states = all_hidden_states + (hidden_states,)
+            all_hidden_states_word = all_hidden_states_word + (hidden_states,)
+            all_hidden_states_char = all_hidden_states_char + (char_hidden_states,)
 
         outputs = (hidden_states, char_hidden_states)
         if self.output_hidden_states:
-            outputs = outputs + (all_hidden_states,)
+            outputs = outputs + (all_hidden_states_word,) + (all_hidden_states_char,)
         if self.output_attentions:
             outputs = outputs + (all_attentions,)
-        return outputs  # last-layer hidden state, (all hidden states), (all attentions)
+        return outputs  # last-layer hidden state, (all hidden states_word), (all_hidden_states_char), (all attentions)
