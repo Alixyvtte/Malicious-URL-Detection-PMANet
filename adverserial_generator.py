@@ -2,7 +2,7 @@ import argparse
 import os
 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from Utils.DataUtils import GetDataAndLabelsFromFiles, DatasetOptions, check_dir
+from data_utils import GetDataAndLabelsFromFiles, DatasetOptions, check_dir
 from tld import get_tld
 import random
 import csv
