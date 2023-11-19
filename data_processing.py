@@ -1,5 +1,4 @@
 import collections
-
 from pytorch_pretrained_bert import BertTokenizer
 from tqdm import tqdm
 import pandas as pd
@@ -29,14 +28,14 @@ def dataPreprocess_bert(filename, input_ids, input_types, input_masks, label, ur
             x1 = tokenizer.tokenize(x1)
             tokens = ["[CLS]"] + x1 + ["[SEP]"]
 
-            # 得到input_id, seg_id, att_mask
+            # Get input_id, seg_id, att_mask
             ids = tokenizer.convert_tokens_to_ids(tokens)
             types = [0] * (len(ids))
             masks = [1] * len(ids)
 
-            # 短则补齐，长则切断
+            # Pad if short, truncate if long
             if len(ids) < pad_size:
-                types = types + [1] * (pad_size - len(ids))  # mask部分 segment置为1
+                types = types + [1] * (pad_size - len(ids))  # Set segment to 1 for the masked part
                 masks = masks + [0] * (pad_size - len(ids))
                 ids = ids + [0] * (pad_size - len(ids))
             else:
@@ -59,7 +58,9 @@ def dataPreprocess_charbert(filename, input_ids, input_types, input_masks, char_
                             urltype):
     """
     Preprocess data from a file containing URLs and labels.
-
+    :param end_ids: Charbert Input
+    :param start_ids: Charbert Input
+    :param char_ids: Charbert Input
     :param filename: The path to the data file.
     :param input_ids: List to store input char IDs.
     :param input_types: List to store segment IDs.
@@ -82,14 +83,14 @@ def dataPreprocess_charbert(filename, input_ids, input_types, input_masks, char_
             x1 = tokenizer.tokenize(x1)
             tokens = ["[CLS]"] + x1 + ["[SEP]"]
 
-            # 得到input_id, seg_id, att_mask
+            # Get input_id, seg_id, att_mask
             ids = tokenizer.convert_tokens_to_ids(tokens)
             types = [0] * (len(ids))
             masks = [1] * len(ids)
 
-            # 短则补齐，长则切断
+            # Pad if short, truncate if long
             if len(ids) < pad_size:
-                types = types + [1] * (pad_size - len(ids))  # mask部分 segment置为1
+                types = types + [1] * (pad_size - len(ids))  # Set segment to 1 for the masked part
                 masks = masks + [0] * (pad_size - len(ids))
                 ids = ids + [0] * (pad_size - len(ids))
             else:
