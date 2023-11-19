@@ -109,7 +109,10 @@ def main():
     input_ids = []  # input char ids
     input_types = []  # segment ids
     input_masks = []  # attention mask
-    label = []  # 标签
+    label = []  
+    char_ids = []
+    start_ids = []
+    end_ids = []
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     dataPreprocess_bert("benign_urls.txt", input_ids, input_types, input_masks, label, 0)
