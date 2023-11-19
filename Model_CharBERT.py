@@ -21,8 +21,6 @@ class CharBERTModel(nn.Module):
 
         self.pooler = BertPooler(config)
 
-        self.init_weights()
-
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
 
@@ -240,9 +238,9 @@ class CharBertEmbeddings(nn.Module):
         return char_embeddings_repr
 
 class CharBertEncoder(nn.Module):
-     """
-       We make changes here, for outputting Both the all hidden states_word and  all_hidden_states_char
-     """
+    """
+     We make changes here, for outputting Both the all hidden states_word and  all_hidden_states_char
+    """
     def __init__(self, config, is_roberta=False):
         super(CharBertEncoder, self).__init__()
         self.output_attentions = config.output_attentions

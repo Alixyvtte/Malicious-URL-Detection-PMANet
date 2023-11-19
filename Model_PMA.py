@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 from pytorch_pretrained_bert import BertModel, BertTokenizer, BertConfig, BertAdam
 from attention import CBAMLayer
+from transformers import BertConfig
 import torch.nn.functional as F
 from Model_CharBERT import CharBERTModel
-from data_processing import CharbertInput
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -16,7 +16,8 @@ class CharBertModel(nn.Module):
 
     def __init__(self):
         super(CharBertModel, self).__init__()
-        self.bert = CharBERTModel.from_pretrained('charbert-bert-wiki')
+        config = BertConfig.from_pretrained('charbert-bert-wiki')
+        self.bert = CharBERTModel(config)
         for param in self.bert.parameters():
             param.requires_grad = True
         self.dropout = nn.Dropout(p=0.1)  # Add a dropout layer
@@ -30,10 +31,9 @@ class CharBertModel(nn.Module):
         mask = x[2]
 
         # add char level information
-        char_ids = []
-        start_ids = []
-        end_ids = []
-        char_ids, start_ids, end_ids = CharbertInput(context, char_ids, start_ids, end_ids)
+        char_ids = x[3]
+        start_ids = x[4]
+        end_ids = x[5]
 
         # CharBERTModel return outputs as a tuple
         # outputs =
@@ -49,20 +49,26 @@ class CharBertModel(nn.Module):
         #  Encoder returns:
         #  last-layer hidden state, (all hidden states_word), (all_hidden_states_char), (all attentions)
         #  tuple(torch.Size([16, 200, 768]),...)
-        sequence_repr = outputs[2]
-        char_sequence_repr = outputs[3]
+        sequence_repr = outputs[0]
+        char_sequence_repr = outputs[2]
         # fuse two channel
         fuse_output =()
         for x1, x2 in zip(sequence_repr, char_sequence_repr):
             x = torch.cat([x1, x2], dim=-1)
             # x torch.Size([16, 200, 768*2])
-            x = x.transpose(1, 2)
-            # x torch.Size([16, 768*2, 200])
-            y = self.fuse(x)
-            # y torch.Size([16, 768, 200])
-            y = y.transpose(1, 2)
+            # print("torch.cat"+str(x.shape))
+            x = x.unsqueeze(1)
+            # print("x.unsqueeze(1)"+str(x.shape))
+            x1 = x.permute(0, 2, 1)
+            # print("x.permute"+str(x1.shape))
+            y = self.fuse(x1)
+            # print("self.fuse(x1)"+str(y.shape))
+            y = y.permute(0, 2, 1)
+            # print("y.permute"+str(y.shape))
             # y torch.Size([16, 200, 768])
-            fuse_output += (y,)
+            y_output = y.squeeze(1)
+            # print("y_output"+str(y_output.shape))
+            fuse_output += (y_output,)
 
         pyramid = tuple(fuse_output)
         pyramid = torch.stack(pyramid, dim=0).permute(1, 0, 2, 3)

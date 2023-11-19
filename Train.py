@@ -5,11 +5,11 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import matplotlib.pyplot as plt
 import seaborn as sns
 import time
-from data_processing import dataPreprocess, spiltDatast
+from data_processing import dataPreprocess_bert, spiltDatast_bert, dataPreprocess_charbert, spiltDatast_charbert
 from Model_PMA import Model, CharBertModel
 
 
-def train(model, device, train_loader, optimizer, epoch): 
+def train(model, device, train_loader, optimizer, epoch):  # Train the model
     """
      Train the model.
 
@@ -19,6 +19,12 @@ def train(model, device, train_loader, optimizer, epoch):
     :param optimizer: The optimization algorithm.
     :param epoch: The current epoch number.
     :return: None
+    Change the format:
+        for batch_idx, (x1, x2, x3, x4, x5, x6, y) in enumerate(train_loader):
+        start_time = time.time()
+        x1, x2, x3, x4, x5, x6, y = x1.to(device), x2.to(device), x3.to(device),x4.to(device), x5.to(device), x6.to(device), y.to(device)
+
+        outputs, pooled, y_pred = model([x1, x2, x3, x4, x5, x6])  # Get the prediction results
     """
     model.train()
     best_acc = 0.0
@@ -49,6 +55,12 @@ def validation(model, device, test_loader):
     :param device: The device to run validation on (e.g., CPU or GPU).
     :param test_loader: The data loader for test data.
     :return: A tuple containing accuracy, precision, recall, and F1 score.
+    Change the format:
+        for batch_idx, (x1, x2, x3, x4, x5, x6, y) in enumerate(test_loader):
+        x1, x2, x3, x4, x5, x6, y = x1.to(device), x2.to(device), x3.to(device),x4.to(device), x5.to(device), x6.to(device), y.to(device)
+
+        with torch.no_grad():
+            outputs, pooled, y_ = model([x1, x2, x3, x4, x5, x6])
     """
     model.eval()
     test_loss = 0.0
@@ -97,15 +109,19 @@ def main():
     input_ids = []  # input char ids
     input_types = []  # segment ids
     input_masks = []  # attention mask
-    label = []  # Label
+    label = []  # 标签
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    dataPreprocess("benign_urls.txt", input_ids, input_types, input_masks, label, 0)
-    dataPreprocess("malware_urls.txt", input_ids, input_types, input_masks, label, 1)
+    dataPreprocess_bert("benign_urls.txt", input_ids, input_types, input_masks, label, 0)
+    dataPreprocess_bert("malware_urls.txt", input_ids, input_types, input_masks, label, 1)
 
-    input_ids_train, input_types_train, input_masks_train, y_train, input_ids_val, input_types_val, input_masks_val, y_val = spiltDatast(
+    input_ids_train, input_types_train, input_masks_train, y_train, input_ids_val, input_types_val, input_masks_val, y_val = spiltDatast_bert(
         input_ids, input_types, input_masks, label)
 
+    """
+       input_ids_train, input_types_train, input_masks_train, char_ids_train, start_ids_train, end_ids_train, y_train, input_ids_val, input_types_val, input_masks_val,char_ids_val,start_ids_val, end_ids_val, y_val = spiltDatast_charbert(
+            input_ids, input_types, input_masks,char_ids,start_ids ,end_ids,label)
+    """
     # Load data into efficient DataLoaders
     BATCH_SIZE = 64
     train_data = TensorDataset(torch.tensor(input_ids_train).to(DEVICE),
@@ -136,5 +152,6 @@ def main():
             best_acc = acc
             torch.save(model.state_dict(), PATH)  # Save the best model
         print("acc is: {:.4f}, best acc is {:.4f}n".format(acc, best_acc))
+
 if __name__ == '__main__':
     main()
