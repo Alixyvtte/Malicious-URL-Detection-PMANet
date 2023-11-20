@@ -23,7 +23,7 @@ class CharBertModel(nn.Module):
         self.dropout = nn.Dropout(p=0.1)  # Add a dropout layer
         self.fc = nn.Linear(768, 2)
         self.hidden_size = 768
-        self.fuse = nn.Conv1d(2 * self.hidden_size, self.hidden_size, kernel_size=1)
+        self.fuse = nn.Conv1d(2 * self.hidden_size, self.hidden_size, kernel_size=1).to(DEVICE)
 
     def forward(self, x):
         context = x[0]
@@ -39,36 +39,31 @@ class CharBertModel(nn.Module):
         # outputs =
         # (sequence_output, pooled_output, char_sequence_output, char_pooled_output) + char_encoder_outputs[1:]
         # we need to fuse the sequence_output and char_sequence_output from all hidden layers
-        outputs = self.bert(char_input_ids=char_ids, start_ids=start_ids, end_ids=end_ids, input_ids=context,
+        all_hidden_states_word, all_hidden_states_char, pooled_output = self.bert(char_input_ids=char_ids, start_ids=start_ids, end_ids=end_ids, input_ids=context,
                             attention_mask=mask,
                             token_type_ids=types, output_hidden_states=True)
 
         # (pooled_output, char_pooled_output)
-        pooled = (outputs[1], outputs[3])
+        fuse_output = []
 
-        #  Encoder returns:
-        #  last-layer hidden state, (all hidden states_word), (all_hidden_states_char), (all attentions)
-        #  tuple(torch.Size([16, 200, 768]),...)
-        sequence_repr = outputs[0]
-        char_sequence_repr = outputs[2]
-        # fuse two channel
-        fuse_output =()
-        for x1, x2 in zip(sequence_repr, char_sequence_repr):
-            x = torch.cat([x1, x2], dim=-1)
-            # x torch.Size([16, 200, 768*2])
-            # print("torch.cat"+str(x.shape))
-            x = x.unsqueeze(1)
-            # print("x.unsqueeze(1)"+str(x.shape))
-            x1 = x.permute(0, 2, 1)
-            # print("x.permute"+str(x1.shape))
-            y = self.fuse(x1)
-            # print("self.fuse(x1)"+str(y.shape))
-            y = y.permute(0, 2, 1)
-            # print("y.permute"+str(y.shape))
-            # y torch.Size([16, 200, 768])
-            y_output = y.squeeze(1)
-            # print("y_output"+str(y_output.shape))
-            fuse_output += (y_output,)
+        for x1, x2 in zip(all_hidden_states_word, all_hidden_states_char):
+            x1 = x1.to(DEVICE)
+            x2 = x2.to(DEVICE)
+
+            # Concatenate two tensors
+            x = torch.cat([x1, x2], dim=-1)  # x torch.Size([16, 200, 768*2])
+
+            # Reshape the tensor
+            x = x.view(x.size(0), -1, x.size(2))  # x torch.Size([16, 768*2, 200])
+
+            # Fuse with the convolutional layer
+            y = self.fuse(x.transpose(1, 2))  # Transpose dimensions to match the convolutional layer's input requirements, y torch.Size([16, 768, 200])
+
+            # Reshape the tensor
+            y_output = y.transpose(1, 2)  # y_output torch.Size([16, 200, 768])
+
+            # Append the result to the output list
+            fuse_output.append(y_output)
 
         pyramid = tuple(fuse_output)
         pyramid = torch.stack(pyramid, dim=0).permute(1, 0, 2, 3)
@@ -106,7 +101,7 @@ class CharBertModel(nn.Module):
         out = self.dropout(compressed_feature_tensor)
         out = self.fc(out)
 
-        return pyramid, pooled, out
+        return pyramid, pooled_output, out
 
 
 class Model(nn.Module):

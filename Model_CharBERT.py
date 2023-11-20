@@ -140,24 +140,25 @@ class CharBERTModel(nn.Module):
         else:
             head_mask = [None] * self.config.num_hidden_layers
 
-        embedding_output = self.embeddings(input_ids=input_ids, position_ids=position_ids, \
-                                           token_type_ids=token_type_ids, inputs_embeds=inputs_embeds)
+        embedding_output = self.embeddings(input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds)
 
         char_embeddings = self.char_embeddings(char_input_ids, start_ids, end_ids)
-        char_encoder_outputs = self.encoder(char_embeddings,
-                                            embedding_output,
-                                            attention_mask=extended_attention_mask,
-                                            head_mask=head_mask,
-                                            encoder_hidden_states=encoder_hidden_states,
-                                            encoder_attention_mask=encoder_extended_attention_mask)
+        all_hidden_states_word, all_hidden_states_char = self.encoder(char_embeddings,
+                                                                      embedding_output,
+                                                                      attention_mask=extended_attention_mask,
+                                                                      head_mask=head_mask,
+                                                                      encoder_hidden_states=True,
+                                                                      encoder_attention_mask=encoder_extended_attention_mask)
 
-        sequence_output, char_sequence_output = char_encoder_outputs[0], char_encoder_outputs[1]
-        pooled_output = self.pooler(sequence_output)
-        char_pooled_output = self.pooler(char_sequence_output)
+        # sequence_output, char_sequence_output = char_encoder_outputs[0], char_encoder_outputs[1]
+        # pooled_output = self.pooler(sequence_output)
+        pooled_output = self.pooler(all_hidden_states_word[-1])
 
-        outputs = (sequence_output, pooled_output, char_sequence_output, char_pooled_output) + char_encoder_outputs[
-                                                                                               1:]  # add hidden_states and attentions if they are here
-        return outputs  # sequence_output, pooled_output, (all_hidden_states_for_word_and_char), (attentions)
+        # outputs = (sequence_output, pooled_output, char_sequence_output, char_pooled_output) + char_encoder_outputs[
+        # 1:]  # add hidden_states and attentions if they are here
+        # sequence_output, pooled_output, (hidden_states), (attentions)
+        return all_hidden_states_word, all_hidden_states_char, pooled_output
+
 
 class BertEmbeddings(nn.Module):
     """Construct the embeddings from word, position and token_type embeddings.
@@ -244,7 +245,7 @@ class CharBertEncoder(nn.Module):
     def __init__(self, config, is_roberta=False):
         super(CharBertEncoder, self).__init__()
         self.output_attentions = config.output_attentions
-        self.output_hidden_states = config.output_hidden_states
+        self.output_hidden_states = True
         self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_hidden_layers)])
         self.word_linear1 = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
         # self.word_linear2 = nn.Linear(config.hidden_size, config.hidden_size, bias=True)
@@ -275,9 +276,6 @@ class CharBertEncoder(nn.Module):
                 fusion_layer = self.fusion_layer_list[i]
             else:
                 fusion_layer = self.fusion_layer
-            if self.output_hidden_states:
-                all_hidden_states_word = all_hidden_states_word + (hidden_states,)
-                all_hidden_states_char = all_hidden_states_char + (char_hidden_states,)
 
             layer_outputs = layer_module(hidden_states, attention_mask, head_mask[i], encoder_hidden_states,
                                          encoder_attention_mask)
@@ -299,15 +297,16 @@ class CharBertEncoder(nn.Module):
 
             if self.output_attentions:
                 all_attentions = all_attentions + (layer_outputs[1],)
+                    # Add last layer
+            if self.output_hidden_states:
+                all_hidden_states_word = all_hidden_states_word + (hidden_states,)
+                all_hidden_states_char = all_hidden_states_char + (char_hidden_states,)
 
-        # Add last layer
-        if self.output_hidden_states:
-            all_hidden_states_word = all_hidden_states_word + (hidden_states,)
-            all_hidden_states_char = all_hidden_states_char + (char_hidden_states,)
+        # outputs = (hidden_states, char_hidden_states)
+        #if self.output_hidden_states:
+        #    outputs = outputs + (all_hidden_states_word,) + (all_hidden_states_char,)
+        #if self.output_attentions:
+        #    outputs = outputs + (all_attentions,)
+        # return outputs  # last-layer hidden state, (all hidden states_word), (all_hidden_states_char), (all attentions)
 
-        outputs = (hidden_states, char_hidden_states)
-        if self.output_hidden_states:
-            outputs = outputs + (all_hidden_states_word,) + (all_hidden_states_char,)
-        if self.output_attentions:
-            outputs = outputs + (all_attentions,)
-        return outputs  # last-layer hidden state, (all hidden states_word), (all_hidden_states_char), (all attentions)
+        return  all_hidden_states_word, all_hidden_states_char
