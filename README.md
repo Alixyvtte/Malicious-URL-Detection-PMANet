@@ -1,5 +1,5 @@
 # Malicious-URL-Detection-PMANet
-This is an implementation of the paper - "Malicious URL Detection via Pretrained Language Model-Guided Multi-Level Feature Attention Network"
+This is an implementation of the [paper](https://arxiv.org/abs/2311.12372) - "Malicious URL Detection via Pretrained Language Model-Guided Multi-Level Feature Attention Network"
 
 ## Overview
 
